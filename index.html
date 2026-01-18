@@ -3,13 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>INTERPARK PRACTICE</title>
+<title>INTERPARK TEST</title>
 
 <style>
 body{
   margin:0;
-  font-family:-apple-system;
   background:#f4f6fa;
+  font-family:-apple-system;
 }
 #app{
   max-width:420px;
@@ -21,268 +21,35 @@ body{
 h1{
   text-align:center;
   color:#0066cc;
-  margin:12px 0 8px;
+  margin:20px 0;
 }
 #screen{
   flex:1;
-  padding:14px;
+  display:flex;
+  flex-direction:column;
+  justify-content:flex-end;
+  padding:20px;
 }
-
-.card{
-  background:#fff;
-  border-radius:12px;
-  padding:18px;
-  text-align:center;
-}
-
-.btn-area{
-  margin-top:14px;
-}
-
 button{
   width:100%;
-  padding:12px;
+  padding:14px;
   border:none;
-  border-radius:8px;
+  border-radius:10px;
   background:#0066cc;
-  color:#fff;
-  font-size:15px;
-  margin-top:6px;
-}
-
-/* 달력 */
-.calendar{
-  display:grid;
-  grid-template-columns:repeat(7,1fr);
-  gap:6px;
-  margin-top:12px;
-}
-.day{
-  padding:10px 0;
-  border-radius:6px;
-  background:#e9ecef;
-}
-.active{background:#0066cc;color:#fff}
-.disabled{background:#ccc;color:#777}
-
-/* 구역 */
-.zone-grid{
-  display:grid;
-  grid-template-columns:repeat(12,1fr);
-  gap:5px;
-}
-.zone{
-  padding:10px 0;
-  font-size:12px;
-  font-weight:700;
-  border-radius:6px;
-  text-align:center;
-}
-.floor{background:#ff6b6b}
-.one{background:#ffd43b}
-.two{background:#69db7c}
-
-/* 좌석 */
-.seat-wrap{
+  color:white;
+  font-size:16px;
   margin-top:10px;
-  height:40vh;
-  overflow:auto;
-  background:#fff;
-  border-radius:12px;
-  padding:6px;
 }
-.seats{
-  display:grid;
-  grid-template-columns:repeat(24,1fr);
-  gap:2px;
-}
-.seat{
-  height:6px;
-  border-radius:1px;
-}
-.free{background:#2db400}
 </style>
 </head>
 
 <body>
 <div id="app">
   <h1>INTERPARK</h1>
-  <div id="screen"></div>
+  <div id="screen">
+    <button>시작하기</button>
+    <button>랭킹 보기</button>
+  </div>
 </div>
-
-<script>
-const screen = document.getElementById("screen");
-
-let startTime = 0;
-let enterTime = 0;
-let rank = 0;
-let zoneType = "";
-let failStack = 0;
-
-/* 시작 화면 */
-function start(){
-  startTime = 0;
-  enterTime = 0;
-  failStack = 0;
-
-  screen.innerHTML = `
-    <div class="card">
-      <p>티켓 예매 연습</p>
-      <div class="btn-area">
-        <button onclick="count()">시작하기</button>
-        <button onclick="showRanking()">랭킹 보기</button>
-      </div>
-    </div>
-  `;
-}
-
-/* 5초 카운트 */
-function count(){
-  let c = 5;
-  screen.innerHTML = `
-    <div class="card">
-      <h2 id="count">${c}</h2>
-      <div class="btn-area">
-        <button onclick="enter()">시작하기</button>
-      </div>
-    </div>
-  `;
-  const t = setInterval(()=>{
-    c--;
-    document.getElementById("count").innerText = c;
-    if(c === 0){
-      startTime = performance.now();
-      clearInterval(t);
-    }
-  },1000);
-}
-
-/* 대기 순번 */
-function enter(){
-  if(startTime === 0 || enterTime) return;
-
-  enterTime = performance.now();
-  const diff = enterTime - startTime;
-  rank = Math.min(50000, Math.floor(6500 + diff * 18));
-
-  screen.innerHTML = `
-    <div class="card">
-      <p>나의 대기순번</p>
-      <h2>${rank}번</h2>
-    </div>
-  `;
-
-  setTimeout(calendar, 5000);
-}
-
-/* 달력 (항상 2월 + 첫 공연) */
-function calendar(){
-  screen.innerHTML = `
-    <div class="card">
-      <h3>2026년 2월</h3>
-      <div class="calendar">
-        ${Array.from({length:28},(_,i)=>{
-          const d=i+1;
-          return (d===27||d===28)
-            ? `<div class="day active" onclick="captcha('${d}')">${d}</div>`
-            : `<div class="day disabled">${d}</div>`;
-        }).join("")}
-      </div>
-    </div>
-  `;
-}
-
-/* 보안코드 */
-function captcha(day){
-  const code = [...Array(6)]
-    .map(()=>String.fromCharCode(65+Math.random()*26|0))
-    .join("");
-
-  screen.innerHTML = `
-    <div class="card">
-      <p>${day}일 공연</p>
-      <h3>${code}</h3>
-      <input id="cap" maxlength="6"
-        oninput="this.value=this.value.toUpperCase().replace(/[^A-Z]/g,'')">
-      <button onclick="check('${code}')">확인</button>
-    </div>
-  `;
-}
-
-function check(c){
-  if(document.getElementById("cap").value === c) zone();
-  else alert("보안코드 오류");
-}
-
-/* 구역 */
-function zone(){
-  const map=[
-    2,2,2,1,1,'F','F',1,1,2,2,2,
-    2,2,2,2,1,1,1,1,2,2,2,2
-  ];
-  screen.innerHTML = `
-    <div class="zone-grid">
-      ${map.map(z=>{
-        const cls=z==='F'?'floor':z===1?'one':'two';
-        return `<div class="zone ${cls}" onclick="seat('${z}')">
-          ${z==='F'?'FLOOR':z+'층'}
-        </div>`;
-      }).join("")}
-    </div>
-  `;
-}
-
-/* 좌석 */
-function seat(z){
-  zoneType = z;
-  window.scrollTo(0,0);
-
-  const count = z==='F'?3 : z===1?13 : 60;
-
-  screen.innerHTML = `
-    <button onclick="zone()">← 구역 선택</button>
-    <div class="seat-wrap" id="wrap">
-      <div class="seats">
-        ${Array.from({length:count},()=>`
-          <div class="seat free" onclick="trySeat(this)"></div>
-        `).join("")}
-      </div>
-    </div>
-  `;
-
-  document.getElementById("wrap").scrollTop = 0;
-}
-
-/* 좌석 시도 (극악 난이도) */
-function trySeat(el){
-  let base =
-    zoneType==='F'?0.0005 :
-    zoneType===1?0.03 : 0.05;
-
-  const success = Math.random() < (base - failStack*0.002);
-  if(!success){
-    failStack++;
-    el.remove();
-    alert("이미 선택된 좌석입니다");
-  }else{
-    alert("🎉 예매 성공");
-    start();
-  }
-}
-
-/* 랭킹 */
-function showRanking(){
-  const r = JSON.parse(localStorage.getItem("ranking")||"[]");
-  screen.innerHTML = `
-    <div class="card">
-      <h3>🏆 랭킹</h3>
-      ${r.length? r.map((v,i)=>`<p>${i+1}. ${v}</p>`).join("") : "<p>기록 없음</p>"}
-      <button onclick="start()">돌아가기</button>
-    </div>
-  `;
-}
-
-start();
-</script>
 </body>
 </html>
