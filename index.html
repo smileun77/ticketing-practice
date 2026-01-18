@@ -2,88 +2,98 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>INTERPARK SIM</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <style>
 body{
   margin:0;
-  font-family:-apple-system,BlinkMacSystemFont;
+  font-family:-apple-system;
   background:#f5f7fa;
   text-align:center;
 }
-h1{color:#1a4cff;margin:40px 0 20px;}
 .hidden{display:none}
+h1{margin:30px 0;color:#1a4cff}
 
 button{
   border:none;
   border-radius:8px;
+  padding:16px;
   font-size:16px;
 }
 
 .primary{
-  width:90%;
-  max-width:360px;
-  padding:16px;
   background:#1a4cff;
   color:white;
-}
-
-.sub{
   width:90%;
   max-width:360px;
-  padding:14px;
-  background:#ddd;
+}
+
+#count{
+  font-size:40px;
+  margin:20px 0;
+}
+
+#msg{
+  font-size:18px;
   margin-top:10px;
+  color:#1a4cff;
 }
-
-#startScreen{margin-top:60px}
-#count{font-size:36px;margin-bottom:20px}
-
-.grid{
-  display:grid;
-  grid-template-columns:repeat(6,1fr);
-  gap:6px;
-  max-width:330px;
-  margin:20px auto;
-}
-
-.zone-floor{background:#8fd3ff}
-.zone-1{background:#1a4cff;color:white}
-.zone-2{background:#ff8fcf}
-
-.seat-grid{
-  display:grid;
-  grid-template-columns:repeat(10,1fr);
-  gap:4px;
-  max-width:320px;
-  margin:20px auto;
-}
-
-.seat{
-  width:100%;
-  aspect-ratio:1/1;
-  border-radius:4px;
-  background:#bbb;
-}
-
-.seat.ok{background:#7CFC98}
-.seat.block{background:#999}
 
 .calendar{
   display:grid;
   grid-template-columns:repeat(7,1fr);
   gap:6px;
-  max-width:320px;
+  max-width:340px;
   margin:20px auto;
 }
 
 .day{
-  padding:12px 0;
+  padding:14px 0;
   background:#eee;
   border-radius:6px;
 }
 .day.active{background:#1a4cff;color:white}
+
+.seat-grid{
+  display:grid;
+  grid-template-columns:repeat(6,1fr);
+  gap:6px;
+  max-width:360px;
+  margin:20px auto;
+}
+
+.seat{
+  aspect-ratio:1/1;
+  border-radius:6px;
+}
+
+.floor{background:#9ddcff}
+.floor.ok{background:#7fcfff}
+
+.one{background:#1a4cff}
+.one.ok{background:#4f7dff}
+
+.two{background:#ff8fcf}
+.two.ok{background:#ffb3df}
+
+.block{filter:grayscale(1);opacity:0.4}
+
+#modal{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,0.4);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+#modalBox{
+  background:white;
+  padding:30px;
+  border-radius:12px;
+  width:80%;
+  max-width:300px;
+}
 </style>
 </head>
 
@@ -91,197 +101,135 @@ button{
 
 <h1>INTERPARK</h1>
 
-<!-- 시작 화면 -->
 <div id="startScreen">
   <div id="count">5</div>
-  <button id="startBtn" class="primary" disabled>시작하기</button><br>
-  <button class="sub" onclick="showRanking()">랭킹보기</button>
+  <div id="msg"></div>
+  <button class="primary" id="startBtn">시작하기</button>
 </div>
 
 <div id="main" class="hidden"></div>
 
+<div id="modal" class="hidden">
+  <div id="modalBox">
+    <div>이미 선택된 좌석입니다</div><br>
+    <button class="primary" onclick="closeModal()">확인</button>
+  </div>
+</div>
+
 <script>
-const main = document.getElementById("main");
 const startBtn = document.getElementById("startBtn");
 const countEl = document.getElementById("count");
+const msgEl = document.getElementById("msg");
+const main = document.getElementById("main");
+const modal = document.getElementById("modal");
 
-let clickTime, waitNum;
-let seatTryCount = 0;
+let seatTry = 0;
+let waitNum = 0;
 
-// ✅ 타이머 (5 → 1)
-let t = 5;
-countEl.innerText = t;
+// 시작 버튼 클릭 → 카운트 시작
+startBtn.onclick = () => {
+  startBtn.disabled = true;
+  let t = 5;
+  countEl.innerText = t;
+  msgEl.innerText = "";
 
-const timer = setInterval(()=>{
-  t--;
-  if(t > 0){
+  const timer = setInterval(() => {
+    t--;
     countEl.innerText = t;
-  }else{
-    clearInterval(timer);
-    countEl.innerText = "시작!";
-    startBtn.disabled = false; // ✅ 여기서만 활성화
-  }
-},1000);
 
-// ✅ 시작하기 클릭 → 대기창
-startBtn.onclick = ()=>{
-  if(startBtn.disabled) return;
-  clickTime = Date.now();
-  waitNum = calcWait();
-  document.getElementById("startScreen").classList.add("hidden");
-  main.classList.remove("hidden");
-  showWaiting();
+    if (t === 1) {
+      msgEl.innerText = "예매 시작";
+    }
+
+    if (t === 0) {
+      clearInterval(timer);
+      // 🔥 1이 끝나면 자동으로 시작하기가 눌린 효과
+      goWaiting();
+    }
+  }, 1000);
 };
 
-// 대기 순번 계산
-function calcWait(){
-  const delay = Math.random();
-  if(delay < 0.3) return rand(7000,9000);
-  if(delay < 0.6) return rand(10000,20000);
-  if(delay < 0.85) return rand(30000,40000);
-  return rand(45000,50000);
-}
-function rand(a,b){return Math.floor(Math.random()*(b-a))+a}
-
-// 대기 화면
-function showWaiting(){
-  main.innerHTML=`
-    <h2>대기 순번</h2>
-    <div>5만 명 중 <b>${waitNum}번째</b></div><br>
-    <button class="primary" onclick="showCalendar()">입장하기</button>
-  `;
-}
-
-// 날짜 선택 (달력 느낌)
-function showCalendar(){
-  main.innerHTML=`
-    <h2>2월</h2>
-    <div class="calendar">
-      <div class="day active" onclick="showTime('2월 27일')">27</div>
-      <div class="day active" onclick="showTime('2월 28일')">28</div>
-    </div>
-    <button class="sub" onclick="showCalendarMarch()">▶ 3월</button><br>
-    <button class="sub" onclick="showWaiting()">뒤로가기</button>
-  `;
-}
-
-function showCalendarMarch(){
-  main.innerHTML=`
-    <h2>3월</h2>
-    <div class="calendar">
-      <div class="day active" onclick="showTime('3월 1일')">1</div>
-    </div>
-    <button class="sub" onclick="showCalendar()">◀ 2월</button><br>
-    <button class="sub" onclick="showWaiting()">뒤로가기</button>
-  `;
-}
-
-// 시간 선택
-function showTime(date){
-  main.innerHTML=`
-    <h2>${date}</h2>
-    <button class="primary" onclick="showCaptcha()">공연 예매</button><br>
-    <button class="sub" onclick="showCalendar()">뒤로가기</button>
-  `;
-}
-
-// 보안코드
-function showCaptcha(){
-  const code=[...Array(6)].map(()=>String.fromCharCode(65+Math.random()*26|0)).join("");
-  window.cap = code;
-  main.innerHTML=`
-    <h2>보안코드 입력</h2>
-    <div>${code}</div><br>
-    <input id="capInput" maxlength="6"
-      oninput="this.value=this.value.toUpperCase()"><br><br>
-    <button class="primary" onclick="checkCap()">확인</button><br>
-    <button class="sub" onclick="showCalendar()">뒤로가기</button>
-  `;
-}
-
-function checkCap(){
-  if(document.getElementById("capInput").value === cap){
-    showZone();
-  }
-}
-
-// 구역 선택
-function showZone(){
-  main.innerHTML=`
-    <h2>구역 선택</h2>
-    <div class="grid">
-      <button class="zone-floor" onclick="showSeat('F')">FLOOR</button>
-      <button class="zone-1" onclick="showSeat('1')">1층</button>
-      <button class="zone-2" onclick="showSeat('2')">2층</button>
-    </div>
-    <button class="sub" onclick="showCaptcha()">뒤로가기</button>
-  `;
-}
-
-// 좌석 선택
-function showSeat(type){
-  seatTryCount = 0; // 좌석 들어올 때 초기화
-  let total, open, rate;
-  if(type==="F"){total=30;open=3;rate=0.0005}
-  if(type==="1"){total=45;open=13;rate=0.03}
-  if(type==="2"){total=60;open=35;rate=0.05}
-
-  const openSet=new Set();
-  while(openSet.size<open) openSet.add(rand(0,total));
-
-  let html='<h2>좌석 선택</h2><div class="seat-grid">';
-  for(let i=0;i<total;i++){
-    if(openSet.has(i)){
-      html+=`<div class="seat ok" onclick="trySeat(this,${rate},'${type}')"></div>`;
-    }else{
-      html+=`<div class="seat block"></div>`;
-    }
-  }
-  html+=`</div><button class="sub" onclick="showZone()">뒤로가기</button>`;
-  main.innerHTML=html;
-}
-
-// 좌석 클릭 시도
-function trySeat(el,rate,type){
-  seatTryCount++; // ✅ 좌석 클릭 횟수
-  if(Math.random() < rate){
-    success(type);
-  }else{
-    el.className="seat block";
-  }
-}
-
-// 성공
-function success(type){
-  const time=((Date.now()-clickTime)/1000).toFixed(2);
-  saveRank(time,waitNum,type,seatTryCount);
-  main.innerHTML=`
-    <h2>🎉 예매 성공</h2>
-    <div>${time}초 / ${waitNum}번</div>
-    <div>${type}구역 / 좌석 시도 ${seatTryCount}회</div><br>
-    <button class="primary" onclick="showRanking()">랭킹 보기</button><br>
-    <button class="sub" onclick="location.reload()">처음으로</button>
-  `;
-}
-
-// 랭킹
-function saveRank(t,w,z,c){
-  const r=JSON.parse(localStorage.getItem("rank")||"[]");
-  r.push({t,w,z,c});
-  localStorage.setItem("rank",JSON.stringify(r));
-}
-
-function showRanking(){
-  const r=JSON.parse(localStorage.getItem("rank")||"[]");
-  let h='<h2>🏆 랭킹</h2>';
-  r.sort((a,b)=>a.t-b.t).forEach(v=>{
-    h+=`<div>${v.t}s / ${v.w}번 / ${v.z} / 좌석 ${v.c}회</div>`;
-  });
-  h+='<br><button class="sub" onclick="location.reload()">처음으로</button>';
+// 대기 순번
+function goWaiting(){
   document.getElementById("startScreen").classList.add("hidden");
   main.classList.remove("hidden");
-  main.innerHTML=h;
+
+  waitNum = Math.floor(Math.random() * 40000) + 7000;
+
+  main.innerHTML = `
+    <h2>대기 순번</h2>
+    <div style="font-size:24px">${waitNum}번째</div>
+    <div style="margin-top:8px;color:#666">현재 대기인원 50,000명</div>
+    <div style="margin-top:12px">잠시 후 자동 입장합니다</div>
+  `;
+
+  setTimeout(showCalendar, 5000);
+}
+
+// 달력
+function showCalendar(){
+  main.innerHTML = `
+    <h2>날짜 선택</h2>
+    <div class="calendar">
+      <div>일</div><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div>토</div>
+      <div></div><div></div>
+      <div class="day active" onclick="showSeat()">27</div>
+      <div class="day active" onclick="showSeat()">28</div>
+    </div>
+  `;
+}
+
+// 좌석
+function showSeat(){
+  seatTry = 0;
+
+  const layout = [
+    "1","1","F","F","1","1",
+    "1","1","F","F","1","1",
+    "2","1","1","1","1","2",
+    "2","1","1","1","1","2",
+    "2","2","2","2","2","2",
+    "2","2","2","2","2","2"
+  ];
+
+  const openSet = new Set();
+  while(openSet.size < 12){
+    openSet.add(Math.floor(Math.random() * 36));
+  }
+
+  let html = `<h2>좌석 선택</h2><div class="seat-grid">`;
+
+  layout.forEach((z,i)=>{
+    let cls = z==="F" ? "floor" : z==="1" ? "one" : "two";
+    if(openSet.has(i)){
+      html += `<div class="seat ${cls} ok" onclick="trySeat()"></div>`;
+    }else{
+      html += `<div class="seat ${cls} block"></div>`;
+    }
+  });
+
+  html += `</div>`;
+  main.innerHTML = html;
+}
+
+// 좌석 시도
+function trySeat(){
+  seatTry++;
+  if(Math.random() < 0.1){
+    main.innerHTML = `
+      <h2>🎉 예매 성공</h2>
+      <div>좌석 시도 ${seatTry}회</div><br>
+      <button class="primary" onclick="location.reload()">처음으로</button>
+    `;
+  }else{
+    modal.classList.remove("hidden");
+  }
+}
+
+function closeModal(){
+  modal.classList.add("hidden");
 }
 </script>
+
 </body>
 </html>
