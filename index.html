@@ -7,11 +7,25 @@
 
 <style>
 body{margin:0;font-family:-apple-system;background:#f4f6fa}
-#app{max-width:420px;margin:auto;padding:16px}
-h1{text-align:center;color:#0066cc}
-button{width:100%;padding:12px;border:none;border-radius:8px;background:#0066cc;color:#fff;font-size:15px;margin-top:8px}
+#app{max-width:420px;margin:auto;height:100vh;display:flex;flex-direction:column}
+h1{text-align:center;color:#0066cc;margin:12px 0}
+#screen{flex:1;padding:16px;display:flex;flex-direction:column}
+
+button{
+  width:100%;padding:12px;border:none;border-radius:8px;
+  background:#0066cc;color:#fff;font-size:15px;margin-top:8px
+}
 .card{background:#fff;border-radius:12px;padding:16px;margin-top:12px}
 .center{text-align:center}
+.bottom{margin-top:auto}
+
+.calendar{
+  display:grid;grid-template-columns:repeat(7,1fr);
+  gap:6px;margin-top:12px
+}
+.day{padding:10px 0;border-radius:6px;background:#e9ecef;text-align:center}
+.active{background:#0066cc;color:white}
+.disabled{background:#ccc;color:#777}
 
 .zone-grid{display:grid;grid-template-columns:repeat(12,1fr);gap:5px}
 .zone{padding:10px 0;border-radius:6px;text-align:center;font-weight:700;font-size:12px}
@@ -35,37 +49,40 @@ button{width:100%;padding:12px;border:none;border-radius:8px;background:#0066cc;
 
 <script>
 const screen=document.getElementById("screen");
-let startTime=0;
-let clicked=false;
-let myRank=0;
+let startTime=0, enterTime=0, finishTime=0;
+let rank=0, selectedZone="";
 
-/* 랭킹 */
-function saveRank(rank){
-  let r=JSON.parse(localStorage.getItem("rank")||"[]");
-  r.push(rank);
-  r=r.sort((a,b)=>a-b).slice(0,10);
-  localStorage.setItem("rank",JSON.stringify(r));
+function saveRanking(){
+  const time=((finishTime-startTime)/1000).toFixed(2);
+  let r=JSON.parse(localStorage.getItem("ranking")||"[]");
+  r.push({time,rank,zone:selectedZone});
+  r=r.sort((a,b)=>a.time-b.time).slice(0,10);
+  localStorage.setItem("ranking",JSON.stringify(r));
 }
 
 /* 시작 */
 function start(){
   screen.innerHTML=`
-    <div class="card center">티켓팅 연습</div>
-    <button onclick="count()">시작하기</button>
+    <div class="center"><h2 id="count"></h2></div>
+    <div class="bottom">
+      <button onclick="count()">시작하기</button>
+      <button onclick="showRanking()">랭킹 보기</button>
+    </div>
   `;
 }
 
 /* 카운트 */
 function count(){
   let c=5;
-  clicked=false;
   screen.innerHTML=`
-    <div class="card center"><h2 id="c">5</h2></div>
-    <button onclick="enter()">시작하기</button>
+    <div class="center"><h2 id="count">5</h2></div>
+    <div class="bottom">
+      <button onclick="enter()">시작하기</button>
+    </div>
   `;
   const t=setInterval(()=>{
     c--;
-    document.getElementById("c").innerText=c;
+    document.getElementById("count").innerText=c;
     if(c===0){
       startTime=performance.now();
       clearInterval(t);
@@ -73,50 +90,51 @@ function count(){
   },1000);
 }
 
-/* 대기 순번 계산 */
+/* 대기 순번 */
 function enter(){
-  if(clicked || startTime===0) return;
-  const diff=performance.now()-startTime;
-  if(diff<0) return;
-  clicked=true;
-
-  myRank=Math.min(
-    50000,
-    Math.floor(7000 + diff*15)
-  );
-  saveRank(myRank);
-
-  screen.innerHTML=`
-    <div class="card center">
-      <p>나의 대기순번</p>
-      <h2>${myRank}번</h2>
-    </div>
-  `;
+  if(startTime===0 || enterTime) return;
+  enterTime=performance.now();
+  const diff=enterTime-startTime;
+  rank=Math.min(50000,Math.floor(6500+diff*18));
+  screen.innerHTML=`<div class="card center">
+    <p>나의 대기순번</p><h2>${rank}번</h2></div>`;
   setTimeout(calendar,5000);
 }
 
 /* 달력 */
 let month=2;
 function calendar(){
+  const days=month===2?[27,28]:[1];
   screen.innerHTML=`
     <div class="card center">
       <h3>2026년 ${month}월</h3>
-      <button onclick="selectDate('${month===2?'2/27 7PM':'3/1 5PM'}')">
-        ${month===2?'2월 27일 (금) 7PM':'3월 1일 (일) 5PM'}
-      </button>
+      <div class="calendar">
+        ${Array.from({length:31},(_,i)=>{
+          const d=i+1;
+          if(days.includes(d))
+            return `<div class="day active" onclick="selectDate(${d})">${d}</div>`;
+          return `<div class="day disabled">${d}</div>`;
+        }).join("")}
+      </div>
       <button onclick="month=month===2?3:2;calendar()">▶</button>
     </div>
   `;
 }
 
+/* 날짜 */
+function selectDate(d){
+  const t=d===27?"7PM":d===28?"6PM":"5PM";
+  captcha(`${d}일 ${t}`);
+}
+
 /* 보안코드 */
-function selectDate(t){
-  const code=Math.random().toString(36).substring(2,6).toUpperCase();
+function captcha(info){
+  const code=Math.random().toString(36).replace(/[^A-Z]/g,'').substring(0,6);
   screen.innerHTML=`
     <div class="card center">
-      <p>${t}</p>
+      <p>${info}</p>
       <p><b>${code}</b></p>
-      <input id="cap" placeholder="보안코드" oninput="this.value=this.value.toUpperCase()">
+      <input id="cap" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z]/g,'')" placeholder="보안코드">
       <button onclick="check('${code}')">확인</button>
     </div>
   `;
@@ -136,35 +154,51 @@ function zone(){
     <div class="zone-grid">
       ${map.map(z=>{
         const cls=z==='F'?'floor':z===1?'one':'two';
-        return `<div class="zone ${cls}" onclick="seat('${cls}')">${z==='F'?'FLOOR':z+'층'}</div>`;
+        const name=z==='F'?'FLOOR':z+'층';
+        return `<div class="zone ${cls}" onclick="seat('${cls}','${name}')">${name}</div>`;
       }).join("")}
     </div>
   `;
 }
 
 /* 좌석 */
-function seat(z){
-  const rate={floor:0.998,one:0.97,two:0.9}[z];
+function seat(cls,name){
+  selectedZone=name;
   screen.innerHTML=`
     <button onclick="zone()">← 구역</button>
     <div class="seat-wrap"><div class="seats">
-      ${Array.from({length:480},()=>Math.random()<rate
+      ${Array.from({length:480},()=>Math.random()<0.92
         ?`<div class="seat dead"></div>`
-        :`<div class="seat free" onclick="trySeat(this,'${z}')"></div>`
+        :`<div class="seat free" onclick="trySeat(this)"></div>`
       ).join("")}
     </div></div>
   `;
 }
 
-function trySeat(el,z){
-  const fail={floor:0.7,one:0.5,two:0.3}[z];
-  if(Math.random()<fail){
+function trySeat(el){
+  if(Math.random()<0.5){
     el.className="seat dead";
     alert("다른 사용자가 먼저 선택했습니다");
   }else{
-    alert("🎉 예매 성공");
-    location.reload();
+    finishTime=performance.now();
+    saveRanking();
+    alert("🎉 예매 완료");
+    start();
   }
+}
+
+/* 랭킹 */
+function showRanking(){
+  const r=JSON.parse(localStorage.getItem("ranking")||"[]");
+  screen.innerHTML=`
+    <div class="card">
+      <h3>🏆 랭킹</h3>
+      ${r.map((v,i)=>`
+        <p>${i+1}. ${v.time}s / ${v.rank}번 / ${v.zone}</p>
+      `).join("")||"기록 없음"}
+      <button onclick="start()">돌아가기</button>
+    </div>
+  `;
 }
 
 start();
