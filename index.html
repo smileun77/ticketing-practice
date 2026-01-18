@@ -12,8 +12,13 @@ body{
   background:#f5f7fa;
   text-align:center;
 }
+
 .hidden{display:none}
-h1{margin:30px 0;color:#1a4cff}
+
+h1{
+  margin:30px 0;
+  color:#1a4cff;
+}
 
 button{
   border:none;
@@ -53,7 +58,10 @@ button{
   background:#eee;
   border-radius:6px;
 }
-.day.active{background:#1a4cff;color:white}
+.day.active{
+  background:#1a4cff;
+  color:white;
+}
 
 .seat-grid{
   display:grid;
@@ -69,21 +77,18 @@ button{
 }
 
 .floor{background:#9ddcff}
-.floor.ok{background:#7fcfff}
-
 .one{background:#1a4cff}
-.one.ok{background:#4f7dff}
-
 .two{background:#ff8fcf}
-.two.ok{background:#ffb3df}
 
+.ok{filter:brightness(1.1)}
 .block{filter:grayscale(1);opacity:0.4}
 
+/* ✅ 모달 완전 고정 */
 #modal{
+  display:none;
   position:fixed;
   inset:0;
   background:rgba(0,0,0,0.4);
-  display:flex;
   align-items:center;
   justify-content:center;
 }
@@ -109,7 +114,8 @@ button{
 
 <div id="main" class="hidden"></div>
 
-<div id="modal" class="hidden">
+<!-- 🔥 모달 -->
+<div id="modal">
   <div id="modalBox">
     <div>이미 선택된 좌석입니다</div><br>
     <button class="primary" onclick="closeModal()">확인</button>
@@ -124,9 +130,8 @@ const main = document.getElementById("main");
 const modal = document.getElementById("modal");
 
 let seatTry = 0;
-let waitNum = 0;
 
-// 시작 버튼 클릭 → 카운트 시작
+// 시작 버튼
 startBtn.onclick = () => {
   startBtn.disabled = true;
   let t = 5;
@@ -137,41 +142,37 @@ startBtn.onclick = () => {
     t--;
     countEl.innerText = t;
 
-    if (t === 1) {
-      msgEl.innerText = "예매 시작";
-    }
+    if (t === 1) msgEl.innerText = "예매 시작";
 
     if (t === 0) {
       clearInterval(timer);
-      // 🔥 1이 끝나면 자동으로 시작하기가 눌린 효과
       goWaiting();
     }
   }, 1000);
 };
 
-// 대기 순번
+// 대기
 function goWaiting(){
   document.getElementById("startScreen").classList.add("hidden");
   main.classList.remove("hidden");
 
-  waitNum = Math.floor(Math.random() * 40000) + 7000;
+  const waitNum = Math.floor(Math.random()*40000)+7000;
 
   main.innerHTML = `
     <h2>대기 순번</h2>
     <div style="font-size:24px">${waitNum}번째</div>
-    <div style="margin-top:8px;color:#666">현재 대기인원 50,000명</div>
-    <div style="margin-top:12px">잠시 후 자동 입장합니다</div>
+    <div style="color:#666">현재 대기인원 50,000명</div>
+    <div style="margin-top:12px">잠시 후 자동 입장</div>
   `;
 
-  setTimeout(showCalendar, 5000);
+  setTimeout(showCalendar,5000);
 }
 
-// 달력
+// 날짜
 function showCalendar(){
   main.innerHTML = `
     <h2>날짜 선택</h2>
     <div class="calendar">
-      <div>일</div><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div>토</div>
       <div></div><div></div>
       <div class="day active" onclick="showSeat()">27</div>
       <div class="day active" onclick="showSeat()">28</div>
@@ -192,42 +193,42 @@ function showSeat(){
     "2","2","2","2","2","2"
   ];
 
-  const openSet = new Set();
-  while(openSet.size < 12){
-    openSet.add(Math.floor(Math.random() * 36));
+  const open = new Set();
+  while(open.size<12){
+    open.add(Math.floor(Math.random()*36));
   }
 
   let html = `<h2>좌석 선택</h2><div class="seat-grid">`;
 
   layout.forEach((z,i)=>{
-    let cls = z==="F" ? "floor" : z==="1" ? "one" : "two";
-    if(openSet.has(i)){
-      html += `<div class="seat ${cls} ok" onclick="trySeat()"></div>`;
+    let cls = z==="F"?"floor":z==="1"?"one":"two";
+    if(open.has(i)){
+      html+=`<div class="seat ${cls} ok" onclick="trySeat()"></div>`;
     }else{
-      html += `<div class="seat ${cls} block"></div>`;
+      html+=`<div class="seat ${cls} block"></div>`;
     }
   });
 
-  html += `</div>`;
+  html+=`</div>`;
   main.innerHTML = html;
 }
 
-// 좌석 시도
+// 좌석 클릭
 function trySeat(){
   seatTry++;
-  if(Math.random() < 0.1){
+  if(Math.random()<0.1){
     main.innerHTML = `
       <h2>🎉 예매 성공</h2>
       <div>좌석 시도 ${seatTry}회</div><br>
       <button class="primary" onclick="location.reload()">처음으로</button>
     `;
   }else{
-    modal.classList.remove("hidden");
+    modal.style.display="flex";
   }
 }
 
 function closeModal(){
-  modal.classList.add("hidden");
+  modal.style.display="none";
 }
 </script>
 
