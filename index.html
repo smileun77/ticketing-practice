@@ -12,61 +12,78 @@ body{
   background:#f5f7fa;
   text-align:center;
 }
-h1{color:#1a4cff;margin-top:40px;}
-.hidden{display:none;}
+h1{color:#1a4cff;margin:40px 0 20px;}
+.hidden{display:none}
 
 button{
   border:none;
   border-radius:8px;
   font-size:16px;
 }
+
 .primary{
-  background:#1a4cff;
-  color:white;
   width:90%;
   max-width:360px;
   padding:16px;
+  background:#1a4cff;
+  color:white;
 }
+
 .sub{
-  background:#eaeaea;
   width:90%;
   max-width:360px;
   padding:14px;
+  background:#ddd;
   margin-top:10px;
 }
 
-#startScreen{
-  margin-top:80px;
-}
-#count{
-  font-size:32px;
-  margin-bottom:30px;
-}
+#startScreen{margin-top:60px}
+#count{font-size:36px;margin-bottom:20px}
 
 .grid{
   display:grid;
   grid-template-columns:repeat(6,1fr);
   gap:6px;
+  max-width:330px;
+  margin:20px auto;
+}
+
+.zone-floor{background:#8fd3ff;color:#000}
+.zone-1{background:#1a4cff;color:white}
+.zone-2{background:#ff8fcf;color:#000}
+
+.seat-grid{
+  display:grid;
+  grid-template-columns:repeat(10,1fr);
+  gap:4px;
   max-width:320px;
   margin:20px auto;
 }
 
-.zoneBtn{
-  padding:12px 0;
-  background:#1a4cff;
-  color:white;
-}
-
 .seat{
-  width:14px;
-  height:14px;
-  border-radius:3px;
-  margin:2px;
-  display:inline-block;
+  width:100%;
+  aspect-ratio:1/1;
+  border-radius:4px;
+  background:#bbb;
 }
-.ok{background:#7CFC98;}
-.block{background:#aaa;}
 
+.seat.ok{background:#7CFC98}
+.seat.block{background:#999}
+
+.calendar{
+  display:grid;
+  grid-template-columns:repeat(7,1fr);
+  gap:6px;
+  max-width:320px;
+  margin:20px auto;
+}
+
+.day{
+  padding:12px 0;
+  background:#eee;
+  border-radius:6px;
+}
+.day.active{background:#1a4cff;color:white}
 </style>
 </head>
 
@@ -74,155 +91,150 @@ button{
 
 <h1>INTERPARK</h1>
 
-<!-- 시작 화면 -->
 <div id="startScreen">
-  <div id="count"></div>
-  <button id="startBtn" class="primary">시작하기</button>
-  <br>
+  <div id="count">5</div>
+  <button id="startBtn" class="primary">시작하기</button><br>
   <button class="sub" onclick="showRanking()">랭킹보기</button>
 </div>
 
-<!-- 메인 화면 -->
 <div id="main" class="hidden"></div>
 
 <script>
-let startTime, clickTime, waitNum, tryCount=0, selectedZone;
+let started=false, clickTime, waitNum, tryCount=0;
+const main=document.getElementById("main");
+const startBtn=document.getElementById("startBtn");
+const countEl=document.getElementById("count");
 
-const layout=[
-["1","1","F","F","1","1"],
-["1","1","F","F","1","1"],
-["2","1","1","1","1","2"],
-["2","1","1","1","1","2"],
-["2","2","2","2","2","2"],
-["2","2","2","2","2","2"]
-];
-
-// 시작하기
-document.getElementById("startBtn").onclick=()=>{
-  let t=5;
-  const c=document.getElementById("count");
-  c.innerText=t;
-  const timer=setInterval(()=>{
+let t=5;
+const timer=setInterval(()=>{
+  if(t>0){
+    countEl.innerText=t;
     t--;
-    c.innerText=t;
-    if(t===0){
-      clearInterval(timer);
-      clickTime=Date.now();
-      waitNum=calcWait();
-      document.getElementById("startScreen").classList.add("hidden");
-      document.getElementById("main").classList.remove("hidden");
-      showCalendar();
-    }
-  },1000);
+  }
+},1000);
+
+startBtn.onclick=()=>{
+  if(started || t>=0) return;
+  started=true;
+  startBtn.disabled=true;
+  clickTime=Date.now();
+  waitNum=calcWait();
+  document.getElementById("startScreen").classList.add("hidden");
+  main.classList.remove("hidden");
+  showWaiting();
 };
 
-// 대기순번 계산
 function calcWait(){
-  const diff=(Date.now()-clickTime)/1000;
-  if(diff<0.2) return rand(7000,9000);
-  if(diff<1) return rand(10000,18000);
-  if(diff<2) return rand(25000,35000);
-  return rand(40000,50000);
+  const delay=(Date.now()-clickTime)/1000;
+  if(delay<0.2) return rand(7000,9000);
+  if(delay<1) return rand(10000,20000);
+  if(delay<2) return rand(30000,40000);
+  return rand(45000,50000);
 }
 function rand(a,b){return Math.floor(Math.random()*(b-a))+a}
 
-// 날짜 선택
-function showCalendar(){
+function showWaiting(){
   main.innerHTML=`
-    <h2>날짜 선택</h2>
-    <button class="primary" onclick="showTime('2026-02-27')">2월 27일</button><br><br>
-    <button class="primary" onclick="showTime('2026-02-28')">2월 28일</button><br><br>
-    <button class="primary" onclick="showTime('2026-03-01')">3월 1일</button>
+    <h2>대기 순번</h2>
+    <div>5만 명 중 <b>${waitNum}번째</b></div><br>
+    <button class="primary" onclick="showCalendar()">입장하기</button>
   `;
 }
 
-// 시간 선택
+function showCalendar(month=2){
+  main.innerHTML=`
+    <h2>${month}월</h2>
+    <div class="calendar">
+      ${[27,28].map(d=>`<div class="day active" onclick="showTime('${month}-${d}')">${d}</div>`).join("")}
+    </div>
+    <button class="sub" onclick="showCalendar(3)">▶ 3월</button><br>
+    <button class="sub" onclick="showWaiting()">뒤로가기</button>
+  `;
+}
+
 function showTime(d){
   main.innerHTML=`
     <h2>${d}</h2>
-    <button class="primary" onclick="captcha()">공연 예매</button>
+    <button class="primary" onclick="showCaptcha()">공연 예매</button><br>
+    <button class="sub" onclick="showCalendar()">뒤로가기</button>
   `;
 }
 
-// 보안코드
-function captcha(){
+function showCaptcha(){
   const code=[...Array(6)].map(()=>String.fromCharCode(65+Math.random()*26|0)).join("");
   window.cap=code;
   main.innerHTML=`
     <h2>보안코드</h2>
     <div>${code}</div><br>
-    <input id="c" maxlength="6"><br><br>
-    <button class="primary" onclick="checkCap()">확인</button>
+    <input id="capInput" maxlength="6" oninput="this.value=this.value.toUpperCase()"><br><br>
+    <button class="primary" onclick="checkCap()">확인</button><br>
+    <button class="sub" onclick="showTime('날짜')">뒤로가기</button>
   `;
 }
+
 function checkCap(){
-  if(document.getElementById("c").value.toUpperCase()===cap) showZone();
+  if(document.getElementById("capInput").value===cap) showZone();
 }
 
-// 구역 선택
 function showZone(){
-  let h='<h2>구역 선택</h2><div class="grid">';
-  layout.flat().forEach(z=>{
-    h+=`<button class="zoneBtn" onclick="seat('${z}')">${z}</button>`;
-  });
-  h+='</div>';
-  main.innerHTML=h;
+  main.innerHTML=`
+    <h2>구역 선택</h2>
+    <div class="grid">
+      <button class="zone-floor" onclick="showSeat('F')">FLOOR</button>
+      <button class="zone-1" onclick="showSeat('1')">1층</button>
+      <button class="zone-2" onclick="showSeat('2')">2층</button>
+    </div>
+    <button class="sub" onclick="showCaptcha()">뒤로가기</button>
+  `;
 }
 
-// 좌석
-function seat(type){
+function showSeat(type){
   tryCount++;
   let total,open,rate;
-  if(type==="F"){total=30;open=3;rate=0.0005;}
-  if(type==="1"){total=45;open=13;rate=0.03;}
-  if(type==="2"){total=60;open=35;rate=0.05;}
+  if(type==="F"){total=30;open=3;rate=0.0005}
+  if(type==="1"){total=45;open=13;rate=0.03}
+  if(type==="2"){total=60;open=35;rate=0.05}
 
-  let openSet=new Set();
+  const openSet=new Set();
   while(openSet.size<open) openSet.add(rand(0,total));
 
-  let h='<h2>좌석 선택</h2>';
+  let html='<h2>좌석 선택</h2><div class="seat-grid">';
   for(let i=0;i<total;i++){
     if(openSet.has(i)){
-      h+=`<div class="seat ok" onclick="attempt('${type}',this,${rate})"></div>`;
+      html+=`<div class="seat ok" onclick="trySeat(this,${rate},'${type}')"></div>`;
     }else{
-      h+=`<div class="seat block"></div>`;
+      html+=`<div class="seat block"></div>`;
     }
   }
-  main.innerHTML=h;
+  html+='</div><button class="sub" onclick="showZone()">뒤로가기</button>';
+  main.innerHTML=html;
 }
 
-// 좌석 시도
-function attempt(z,el,rate){
+function trySeat(el,rate,type){
   if(Math.random()<rate){
-    success(z);
+    success(type);
   }else{
     el.className="seat block";
   }
 }
 
-// 성공
-function success(z){
+function success(type){
   const time=((Date.now()-clickTime)/1000).toFixed(2);
-  saveRank(time,waitNum,z,tryCount);
-  showSuccess(time,z);
-}
-
-// 성공 화면
-function showSuccess(t,z){
+  saveRank(time,waitNum,type,tryCount);
   main.innerHTML=`
     <h2>🎉 예매 성공</h2>
-    <div>${t}초 / ${waitNum}번 / ${z}구역</div><br>
-    <button class="primary" onclick="showRanking()">랭킹 보기</button><br><br>
+    <div>${time}초 / ${waitNum}번 / ${type}구역</div><br>
+    <button class="primary" onclick="showRanking()">랭킹 보기</button><br>
     <button class="sub" onclick="location.reload()">처음으로</button>
   `;
 }
 
-// 랭킹
 function saveRank(t,w,z,c){
   const r=JSON.parse(localStorage.getItem("rank")||"[]");
   r.push({t,w,z,c});
   localStorage.setItem("rank",JSON.stringify(r));
 }
+
 function showRanking(){
   const r=JSON.parse(localStorage.getItem("rank")||"[]");
   let h='<h2>🏆 랭킹</h2>';
@@ -230,9 +242,9 @@ function showRanking(){
     h+=`<div>${v.t}s / ${v.w}번 / ${v.z} / 시도 ${v.c}</div>`;
   });
   h+='<br><button class="sub" onclick="location.reload()">처음으로</button>';
-  main.innerHTML=h;
   document.getElementById("startScreen").classList.add("hidden");
   main.classList.remove("hidden");
+  main.innerHTML=h;
 }
 </script>
 </body>
