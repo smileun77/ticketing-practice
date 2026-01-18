@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>INTERPARK TICKETING PRACTICE</title>
+
+<style>
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system;
+  background: #f2f2f2;
+}
+#app {
+  max-width: 420px;
+  margin: 0 auto;
+  padding: 16px;
+}
+h1 {
+  text-align: center;
+  color: #e6002d;
+}
+button {
+  width: 100%;
+  padding: 16px;
+  font-size: 18px;
+  border: none;
+  border-radius: 8px;
+  background: #e6002d;
+  color: white;
+  margin-top: 12px;
+}
+input {
+  width: 100%;
+  padding: 14px;
+  font-size: 16px;
+  margin-top: 10px;
+}
+.seats {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 6px;
+  margin-top: 10px;
+}
+.seat {
+  padding: 10px;
+  font-size: 12px;
+  border-radius: 6px;
+  text-align: center;
+  color: white;
+}
+.free { background: #009a44; }
+.taken { background: #999; }
+.info {
+  background: white;
+  padding: 12px;
+  border-radius: 8px;
+  margin-top: 10px;
+}
+.rank {
+  font-weight: bold;
+  color: #e6002d;
+}
+</style>
+</head>
+
+<body>
+<div id="app">
+  <h1>INTERPARK TICKET</h1>
+  <div id="screen"></div>
+</div>
+
+<script>
+const screen = document.getElementById("screen");
+let queueRank = Math.floor(Math.random() * 50000) + 1;
+let startTime = 0;
+let bestTime = localStorage.getItem("bestTime");
+
+function showQueue() {
+  screen.innerHTML = `
+    <div class="info">
+      <p>접속 대기 중...</p>
+      <h2>내 순번: <span class="rank">${queueRank}번</span></h2>
+      ${bestTime ? `<p>🏆 최고 기록: ${bestTime}ms</p>` : ""}
+    </div>
+    <button onclick="startTicketing()">예매 시작</button>
+  `;
+}
+
+function startTicketing() {
+  startTime = performance.now();
+  showCaptcha();
+}
+
+function showCaptcha() {
+  const code = Math.random().toString(36).substring(2,7).toUpperCase();
+  screen.innerHTML = `
+    <p>보안문자를 입력하세요</p>
+    <h2>${code}</h2>
+    <input id="cap" placeholder="보안문자 입력"/>
+    <button onclick="checkCaptcha('${code}')">확인</button>
+  `;
+}
+
+function checkCaptcha(code) {
+  const v = document.getElementById("cap").value;
+  if (v !== code) {
+    alert("보안문자가 틀렸습니다");
+    showCaptcha();
+    return;
+  }
+  selectDate();
+}
+
+function selectDate() {
+  screen.innerHTML = `
+    <p>공연 날짜 선택</p>
+    <button onclick="selectSeat()">2026.03.21 (KSPO DOME)</button>
+  `;
+}
+
+function selectSeat() {
+  let seatsHTML = "";
+  for (let i = 1; i <= 36; i++) {
+    const taken = Math.random() < 0.35;
+    seatsHTML += `
+      <div class="seat ${taken ? "taken" : "free"}"
+        onclick="${taken ? "alert('이미 선택된 좌석입니다')" : "finish()"}">
+        ${i}
+      </div>
+    `;
+  }
+  screen.innerHTML = `
+    <p>KSPO DOME 좌석 선택</p>
+    <div class="seats">${seatsHTML}</div>
+  `;
+}
+
+function finish() {
+  const time = Math.floor(performance.now() - startTime);
+  if (!bestTime || time < bestTime) {
+    localStorage.setItem("bestTime", time);
+  }
+  screen.innerHTML = `
+    <h2>🎉 예매 성공!</h2>
+    <p>반응 속도: <b>${time}ms</b></p>
+    <p>예상 순번: <b>${Math.ceil(time / 40)}번</b></p>
+    <button onclick="location.reload()">다시 도전</button>
+  `;
+}
+
+showQueue();
+</script>
+</body>
+</html>
