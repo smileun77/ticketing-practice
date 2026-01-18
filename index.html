@@ -40,16 +40,17 @@ button{
 .center{text-align:center;}
 .small{font-size:13px;color:#777;}
 
-.block{
+.zone-grid{
   display:grid;
-  grid-template-columns:repeat(6,1fr);
+  grid-template-columns:repeat(12,1fr);
   gap:6px;
 }
 .zone{
-  padding:16px 0;
+  padding:14px 0;
   border-radius:8px;
   text-align:center;
   font-weight:700;
+  font-size:13px;
 }
 .floor{background:#ff6b6b;}
 .one{background:#ffd43b;}
@@ -74,11 +75,6 @@ button{
 }
 .free{background:#2db400;}
 .taken{background:#888;}
-
-.rank{
-  font-size:14px;
-  margin-top:6px;
-}
 </style>
 </head>
 
@@ -94,24 +90,11 @@ let queue = Math.floor(Math.random()*50000)+1;
 let canClick=false;
 let lastClick=0;
 
-/* 랭킹 */
-function saveRank(){
-  const r = JSON.parse(localStorage.getItem("rank")||"[]");
-  r.push(queue);
-  r.sort((a,b)=>a-b);
-  localStorage.setItem("rank",JSON.stringify(r.slice(0,10)));
-}
-function rankUI(){
-  const r = JSON.parse(localStorage.getItem("rank")||"[]");
-  return r.map((v,i)=>`<div class="rank">${i+1}위 : ${v}번</div>`).join("");
-}
-
 /* 시작 */
 function start(){
   screen.innerHTML=`
     <div class="card center">
       <p>티켓팅 연습</p>
-      ${rankUI()}
     </div>
     <button onclick="count()">시작하기</button>
   `;
@@ -142,50 +125,50 @@ function wait(){
   if(!canClick) return;
   lastClick=Date.now();
   setTimeout(()=>{
-    if(Date.now()-lastClick>=0){
-      screen.innerHTML=`
-        <div class="card center">
-          <p>대기 순번</p>
-          <h2>${queue}번</h2>
-        </div>
-      `;
-      setTimeout(zoneSelect,3000);
-    }
+    screen.innerHTML=`
+      <div class="card center">
+        <p>대기 순번</p>
+        <h2>${queue}번</h2>
+      </div>
+    `;
+    setTimeout(zoneSelect,3000);
   },0);
 }
 
-/* 구역 */
+/* 구역 선택 (고정 배치) */
 function zoneSelect(){
+  const layout=[
+    2,2,2,1,1,'F','F',1,1,2,2,2,
+    2,2,2,2,1,1,1,1,2,2,2,2
+  ];
   screen.innerHTML=`
-    <div class="block">
-      ${[
-        2,2,2,1,1,'F','F',1,1,2,2,2,
-        2,2,2,2,1,1,1,1,2,2,2,2
-      ].map(z=>{
-        const c=z==='F'?'floor':z===1?'one':'two';
-        const t=z==='F'?'FLOOR':z+'층';
-        return `<div class="zone ${c}" onclick="seat('${c}')">${t}</div>`;
+    <div class="zone-grid">
+      ${layout.map(z=>{
+        const cls=z==='F'?'floor':z===1?'one':'two';
+        const txt=z==='F'?'FLOOR':z+'층';
+        return `<div class="zone ${cls}" onclick="seat('${cls}')">${txt}</div>`;
       }).join("")}
     </div>
   `;
 }
 
-/* 좌석 */
+/* 좌석 (난이도 극악 + 일정 배치) */
 function seat(zone){
-  const rate={floor:0.97,one:0.85,two:0.55}[zone];
-  let locked=false;
+  const rate={floor:0.995,one:0.92,two:0.75}[zone];
+  const total=180;
+  const blocked=Math.floor(total*rate);
+
   screen.innerHTML=`
     <button onclick="zoneSelect()">← 구역 다시 선택</button>
     <div class="seat-wrap">
       <div class="seats">
-        ${Array.from({length:180},()=>{
-          const taken=Math.random()<rate;
-          return `<div class="seat ${taken?'taken':'free'}"
-            onclick="${
-              taken
-              ? "this.style.background='#555';this.onclick=null;alert('이미 선택된 좌석입니다')"
-              : "finish()"
-            }"></div>`;
+        ${Array.from({length:total},(_,i)=>{
+          if(i<blocked){
+            return `<div class="seat taken"
+              onclick="this.style.background='#555';alert('이미 선택된 좌석입니다')"></div>`;
+          }else{
+            return `<div class="seat free" onclick="finish()"></div>`;
+          }
         }).join("")}
       </div>
     </div>
@@ -194,7 +177,6 @@ function seat(zone){
 
 /* 성공 */
 function finish(){
-  saveRank();
   screen.innerHTML=`
     <div class="card center">
       <h2>🎉 예매 성공</h2>
