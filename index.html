@@ -9,21 +9,30 @@
 body{margin:0;font-family:-apple-system;background:#f4f6fa}
 #app{max-width:420px;margin:auto;height:100vh;display:flex;flex-direction:column}
 h1{text-align:center;color:#0066cc;margin:12px 0}
-#screen{flex:1;padding:16px;display:flex;flex-direction:column}
+#screen{flex:1;display:flex;flex-direction:column;padding:16px}
 
 button{
   width:100%;padding:12px;border:none;border-radius:8px;
   background:#0066cc;color:#fff;font-size:15px;margin-top:8px
 }
-.card{background:#fff;border-radius:12px;padding:16px;margin-top:12px}
+.card{background:#fff;border-radius:12px;padding:16px}
 .center{text-align:center}
+.top{margin-top:0}
+.middle{margin:auto 0}
 .bottom{margin-top:auto}
 
 .calendar{
-  display:grid;grid-template-columns:repeat(7,1fr);
-  gap:6px;margin-top:12px
+  display:grid;
+  grid-template-columns:repeat(7,1fr);
+  gap:6px;
+  margin:16px 0;
 }
-.day{padding:10px 0;border-radius:6px;background:#e9ecef;text-align:center}
+.day{
+  padding:10px 0;
+  border-radius:6px;
+  background:#e9ecef;
+  text-align:center;
+}
 .active{background:#0066cc;color:white}
 .disabled{background:#ccc;color:#777}
 
@@ -49,9 +58,13 @@ button{
 
 <script>
 const screen=document.getElementById("screen");
-let startTime=0, enterTime=0, finishTime=0;
-let rank=0, selectedZone="";
 
+let startTime=0, finishTime=0;
+let enterTime=0;
+let rank=0;
+let selectedZone="";
+
+/* 랭킹 저장 (A안) */
 function saveRanking(){
   const time=((finishTime-startTime)/1000).toFixed(2);
   let r=JSON.parse(localStorage.getItem("ranking")||"[]");
@@ -60,10 +73,13 @@ function saveRanking(){
   localStorage.setItem("ranking",JSON.stringify(r));
 }
 
-/* 시작 */
+/* 시작 화면 */
 function start(){
+  startTime=0; finishTime=0; enterTime=0;
   screen.innerHTML=`
-    <div class="center"><h2 id="count"></h2></div>
+    <div class="top center">
+      <h2 id="count"></h2>
+    </div>
     <div class="bottom">
       <button onclick="count()">시작하기</button>
       <button onclick="showRanking()">랭킹 보기</button>
@@ -71,11 +87,13 @@ function start(){
   `;
 }
 
-/* 카운트 */
+/* 5초 카운트 */
 function count(){
   let c=5;
   screen.innerHTML=`
-    <div class="center"><h2 id="count">5</h2></div>
+    <div class="top center">
+      <h2 id="count">5</h2>
+    </div>
     <div class="bottom">
       <button onclick="enter()">시작하기</button>
     </div>
@@ -96,22 +114,26 @@ function enter(){
   enterTime=performance.now();
   const diff=enterTime-startTime;
   rank=Math.min(50000,Math.floor(6500+diff*18));
-  screen.innerHTML=`<div class="card center">
-    <p>나의 대기순번</p><h2>${rank}번</h2></div>`;
+  screen.innerHTML=`
+    <div class="card center middle">
+      <p>나의 대기순번</p>
+      <h2>${rank}번</h2>
+    </div>
+  `;
   setTimeout(calendar,5000);
 }
 
 /* 달력 */
 let month=2;
 function calendar(){
-  const days=month===2?[27,28]:[1];
+  const activeDays = month===2 ? [27,28] : [1];
   screen.innerHTML=`
-    <div class="card center">
+    <div class="card center middle">
       <h3>2026년 ${month}월</h3>
       <div class="calendar">
         ${Array.from({length:31},(_,i)=>{
           const d=i+1;
-          if(days.includes(d))
+          if(activeDays.includes(d))
             return `<div class="day active" onclick="selectDate(${d})">${d}</div>`;
           return `<div class="day disabled">${d}</div>`;
         }).join("")}
@@ -121,7 +143,7 @@ function calendar(){
   `;
 }
 
-/* 날짜 */
+/* 날짜 선택 */
 function selectDate(d){
   const t=d===27?"7PM":d===28?"6PM":"5PM";
   captcha(`${d}일 ${t}`);
@@ -129,12 +151,14 @@ function selectDate(d){
 
 /* 보안코드 */
 function captcha(info){
-  const code=Math.random().toString(36).replace(/[^A-Z]/g,'').substring(0,6);
+  const code=[...Array(6)].map(()=>String.fromCharCode(65+Math.floor(Math.random()*26))).join("");
   screen.innerHTML=`
-    <div class="card center">
+    <div class="card center middle">
       <p>${info}</p>
       <p><b>${code}</b></p>
-      <input id="cap" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z]/g,'')" placeholder="보안코드">
+      <input id="cap"
+        placeholder="보안코드 입력"
+        oninput="this.value=this.value.toUpperCase().replace(/[^A-Z]/g,'')">
       <button onclick="check('${code}')">확인</button>
     </div>
   `;
@@ -144,37 +168,40 @@ function check(c){
   else alert("보안코드 오류");
 }
 
-/* 구역 */
+/* 구역 선택 */
 function zone(){
   const map=[
     2,2,2,1,1,'F','F',1,1,2,2,2,
     2,2,2,2,1,1,1,1,2,2,2,2
   ];
   screen.innerHTML=`
-    <div class="zone-grid">
+    <div class="zone-grid middle">
       ${map.map(z=>{
         const cls=z==='F'?'floor':z===1?'one':'two';
         const name=z==='F'?'FLOOR':z+'층';
-        return `<div class="zone ${cls}" onclick="seat('${cls}','${name}')">${name}</div>`;
+        return `<div class="zone ${cls}" onclick="seat('${name}')">${name}</div>`;
       }).join("")}
     </div>
   `;
 }
 
 /* 좌석 */
-function seat(cls,name){
+function seat(name){
   selectedZone=name;
   screen.innerHTML=`
     <button onclick="zone()">← 구역</button>
-    <div class="seat-wrap"><div class="seats">
-      ${Array.from({length:480},()=>Math.random()<0.92
-        ?`<div class="seat dead"></div>`
-        :`<div class="seat free" onclick="trySeat(this)"></div>`
-      ).join("")}
-    </div></div>
+    <div class="seat-wrap">
+      <div class="seats">
+        ${Array.from({length:480},()=>Math.random()<0.92
+          ?`<div class="seat dead"></div>`
+          :`<div class="seat free" onclick="trySeat(this)"></div>`
+        ).join("")}
+      </div>
+    </div>
   `;
 }
 
+/* 좌석 시도 */
 function trySeat(el){
   if(Math.random()<0.5){
     el.className="seat dead";
@@ -187,15 +214,16 @@ function trySeat(el){
   }
 }
 
-/* 랭킹 */
+/* 랭킹 화면 */
 function showRanking(){
   const r=JSON.parse(localStorage.getItem("ranking")||"[]");
   screen.innerHTML=`
     <div class="card">
       <h3>🏆 랭킹</h3>
-      ${r.map((v,i)=>`
-        <p>${i+1}. ${v.time}s / ${v.rank}번 / ${v.zone}</p>
-      `).join("")||"기록 없음"}
+      ${r.length
+        ? r.map((v,i)=>`<p>${i+1}. ${v.time}s / ${v.rank}번 / ${v.zone}</p>`).join("")
+        : "<p>기록 없음</p>"
+      }
       <button onclick="start()">돌아가기</button>
     </div>
   `;
