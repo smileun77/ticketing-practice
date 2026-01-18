@@ -3,168 +3,236 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>INTERPARK TICKETING SIM</title>
+<title>INTERPARK SIM</title>
+
 <style>
-body {
-  margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont;
-  background: #f5f7fa;
-  text-align: center;
+body{
+  margin:0;
+  font-family:-apple-system,BlinkMacSystemFont;
+  background:#f5f7fa;
+  text-align:center;
 }
-h1 { color:#1a4cff; }
-button {
-  padding: 14px 20px;
-  margin: 10px;
-  font-size: 16px;
-  border: none;
-  border-radius: 8px;
-}
-.blue { background:#1a4cff; color:white; }
-.gray { background:#ccc; color:#666; }
-.green { background:#7CFC98; }
-.hidden { display:none; }
+h1{color:#1a4cff;margin-top:40px;}
+.hidden{display:none;}
 
-#bottom {
-  position: fixed;
-  bottom: 30px;
-  width: 100%;
+button{
+  border:none;
+  border-radius:8px;
+  font-size:16px;
 }
-
-.grid {
-  display: grid;
-  grid-template-columns: repeat(6,1fr);
-  gap: 6px;
-  max-width: 320px;
-  margin: auto;
+.primary{
+  background:#1a4cff;
+  color:white;
+  width:90%;
+  max-width:360px;
+  padding:16px;
+}
+.sub{
+  background:#eaeaea;
+  width:90%;
+  max-width:360px;
+  padding:14px;
+  margin-top:10px;
 }
 
-.seat {
-  width: 20px;
-  height: 20px;
-  margin: 3px;
-  display: inline-block;
-  border-radius: 4px;
+#startScreen{
+  margin-top:80px;
 }
+#count{
+  font-size:32px;
+  margin-bottom:30px;
+}
+
+.grid{
+  display:grid;
+  grid-template-columns:repeat(6,1fr);
+  gap:6px;
+  max-width:320px;
+  margin:20px auto;
+}
+
+.zoneBtn{
+  padding:12px 0;
+  background:#1a4cff;
+  color:white;
+}
+
+.seat{
+  width:14px;
+  height:14px;
+  border-radius:3px;
+  margin:2px;
+  display:inline-block;
+}
+.ok{background:#7CFC98;}
+.block{background:#aaa;}
+
 </style>
 </head>
+
 <body>
 
 <h1>INTERPARK</h1>
 
-<div id="timer"></div>
-
-<div id="bottom">
-  <button class="blue" id="startBtn">시작하기</button>
-  <button onclick="showRanking()">랭킹보기</button>
+<!-- 시작 화면 -->
+<div id="startScreen">
+  <div id="count"></div>
+  <button id="startBtn" class="primary">시작하기</button>
+  <br>
+  <button class="sub" onclick="showRanking()">랭킹보기</button>
 </div>
 
-<div id="screen"></div>
+<!-- 메인 화면 -->
+<div id="main" class="hidden"></div>
 
 <script>
-let startTime, clickTime, waitNumber, tryCount=0, selectedZone;
+let startTime, clickTime, waitNum, tryCount=0, selectedZone;
 
-const zoneLayout = [
- ["1","1","F","F","1","1"],
- ["1","1","F","F","1","1"],
- ["2","1","1","1","1","2"],
- ["2","1","1","1","1","2"],
- ["2","2","2","2","2","2"],
- ["2","2","2","2","2","2"]
+const layout=[
+["1","1","F","F","1","1"],
+["1","1","F","F","1","1"],
+["2","1","1","1","1","2"],
+["2","1","1","1","1","2"],
+["2","2","2","2","2","2"],
+["2","2","2","2","2","2"]
 ];
 
-document.getElementById("startBtn").onclick = startCountdown;
-
-function startCountdown(){
+// 시작하기
+document.getElementById("startBtn").onclick=()=>{
   let t=5;
-  document.getElementById("timer").innerText = "5";
-  const c = setInterval(()=>{
+  const c=document.getElementById("count");
+  c.innerText=t;
+  const timer=setInterval(()=>{
     t--;
-    document.getElementById("timer").innerText = t;
+    c.innerText=t;
     if(t===0){
-      clearInterval(c);
-      clickTime = Date.now();
-      waitNumber = 9000 + Math.floor(Math.random()*3000);
-      showDate();
+      clearInterval(timer);
+      clickTime=Date.now();
+      waitNum=calcWait();
+      document.getElementById("startScreen").classList.add("hidden");
+      document.getElementById("main").classList.remove("hidden");
+      showCalendar();
     }
   },1000);
-}
+};
 
-function showDate(){
-  document.getElementById("screen").innerHTML = `
+// 대기순번 계산
+function calcWait(){
+  const diff=(Date.now()-clickTime)/1000;
+  if(diff<0.2) return rand(7000,9000);
+  if(diff<1) return rand(10000,18000);
+  if(diff<2) return rand(25000,35000);
+  return rand(40000,50000);
+}
+function rand(a,b){return Math.floor(Math.random()*(b-a))+a}
+
+// 날짜 선택
+function showCalendar(){
+  main.innerHTML=`
     <h2>날짜 선택</h2>
-    <button class="blue" onclick="showCaptcha()">2월 27일</button>
+    <button class="primary" onclick="showTime('2026-02-27')">2월 27일</button><br><br>
+    <button class="primary" onclick="showTime('2026-02-28')">2월 28일</button><br><br>
+    <button class="primary" onclick="showTime('2026-03-01')">3월 1일</button>
   `;
 }
 
-function showCaptcha(){
-  const code = Array.from({length:6},()=>String.fromCharCode(65+Math.random()*26|0)).join("");
-  window.captcha=code;
-  document.getElementById("screen").innerHTML = `
-    <h2>보안코드 입력</h2>
-    <div>${code}</div>
-    <input id="cap" maxlength="6">
-    <br>
-    <button class="blue" onclick="checkCap()">확인</button>
+// 시간 선택
+function showTime(d){
+  main.innerHTML=`
+    <h2>${d}</h2>
+    <button class="primary" onclick="captcha()">공연 예매</button>
   `;
 }
 
+// 보안코드
+function captcha(){
+  const code=[...Array(6)].map(()=>String.fromCharCode(65+Math.random()*26|0)).join("");
+  window.cap=code;
+  main.innerHTML=`
+    <h2>보안코드</h2>
+    <div>${code}</div><br>
+    <input id="c" maxlength="6"><br><br>
+    <button class="primary" onclick="checkCap()">확인</button>
+  `;
+}
 function checkCap(){
-  if(document.getElementById("cap").value.toUpperCase()===window.captcha){
-    showZone();
-  }
+  if(document.getElementById("c").value.toUpperCase()===cap) showZone();
 }
 
+// 구역 선택
 function showZone(){
-  let html='<h2>구역 선택</h2><div class="grid">';
-  zoneLayout.flat().forEach(z=>{
-    html+=`<button class="blue" onclick="seat('${z}')">${z}</button>`;
+  let h='<h2>구역 선택</h2><div class="grid">';
+  layout.flat().forEach(z=>{
+    h+=`<button class="zoneBtn" onclick="seat('${z}')">${z}</button>`;
   });
-  html+='</div>';
-  document.getElementById("screen").innerHTML=html;
+  h+='</div>';
+  main.innerHTML=h;
 }
 
+// 좌석
 function seat(type){
   tryCount++;
-  let total, open;
-  if(type==="F"){ total=30; open=3; }
-  if(type==="1"){ total=45; open=13; }
-  if(type==="2"){ total=60; open=35; }
+  let total,open,rate;
+  if(type==="F"){total=30;open=3;rate=0.0005;}
+  if(type==="1"){total=45;open=13;rate=0.03;}
+  if(type==="2"){total=60;open=35;rate=0.05;}
 
-  let openSet = new Set();
-  while(openSet.size<open){
-    openSet.add(Math.floor(Math.random()*total));
-  }
+  let openSet=new Set();
+  while(openSet.size<open) openSet.add(rand(0,total));
 
-  let html='<h2>좌석 선택</h2>';
+  let h='<h2>좌석 선택</h2>';
   for(let i=0;i<total;i++){
     if(openSet.has(i)){
-      html+=`<div class="seat green" onclick="success('${type}')"></div>`;
+      h+=`<div class="seat ok" onclick="attempt('${type}',this,${rate})"></div>`;
     }else{
-      html+=`<div class="seat gray"></div>`;
+      h+=`<div class="seat block"></div>`;
     }
   }
-  document.getElementById("screen").innerHTML=html;
+  main.innerHTML=h;
 }
 
-function success(zone){
+// 좌석 시도
+function attempt(z,el,rate){
+  if(Math.random()<rate){
+    success(z);
+  }else{
+    el.className="seat block";
+  }
+}
+
+// 성공
+function success(z){
   const time=((Date.now()-clickTime)/1000).toFixed(2);
-  saveRank(time,waitNumber,zone,tryCount);
-  alert(`예매 성공!\n${time}초\n${zone}구역`);
+  saveRank(time,waitNum,z,tryCount);
+  showSuccess(time,z);
 }
 
+// 성공 화면
+function showSuccess(t,z){
+  main.innerHTML=`
+    <h2>🎉 예매 성공</h2>
+    <div>${t}초 / ${waitNum}번 / ${z}구역</div><br>
+    <button class="primary" onclick="showRanking()">랭킹 보기</button><br><br>
+    <button class="sub" onclick="location.reload()">처음으로</button>
+  `;
+}
+
+// 랭킹
 function saveRank(t,w,z,c){
   const r=JSON.parse(localStorage.getItem("rank")||"[]");
   r.push({t,w,z,c});
   localStorage.setItem("rank",JSON.stringify(r));
 }
-
 function showRanking(){
   const r=JSON.parse(localStorage.getItem("rank")||"[]");
-  let html='<h2>랭킹</h2>';
+  let h='<h2>🏆 랭킹</h2>';
   r.sort((a,b)=>a.t-b.t).forEach(v=>{
-    html+=`<div>${v.t}s / ${v.w}번 / ${v.z} / 시도:${v.c}</div>`;
+    h+=`<div>${v.t}s / ${v.w}번 / ${v.z} / 시도 ${v.c}</div>`;
   });
-  document.getElementById("screen").innerHTML=html;
+  h+='<br><button class="sub" onclick="location.reload()">처음으로</button>';
+  main.innerHTML=h;
+  document.getElementById("startScreen").classList.add("hidden");
+  main.classList.remove("hidden");
 }
 </script>
 </body>
