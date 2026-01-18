@@ -48,9 +48,9 @@ button{
   margin:20px auto;
 }
 
-.zone-floor{background:#8fd3ff;color:#000}
+.zone-floor{background:#8fd3ff}
 .zone-1{background:#1a4cff;color:white}
-.zone-2{background:#ff8fcf;color:#000}
+.zone-2{background:#ff8fcf}
 
 .seat-grid{
   display:grid;
@@ -91,48 +91,59 @@ button{
 
 <h1>INTERPARK</h1>
 
+<!-- 시작 화면 -->
 <div id="startScreen">
   <div id="count">5</div>
-  <button id="startBtn" class="primary">시작하기</button><br>
+  <button id="startBtn" class="primary" disabled>시작하기</button><br>
   <button class="sub" onclick="showRanking()">랭킹보기</button>
 </div>
 
 <div id="main" class="hidden"></div>
 
 <script>
-let started=false, clickTime, waitNum, tryCount=0;
-const main=document.getElementById("main");
-const startBtn=document.getElementById("startBtn");
-const countEl=document.getElementById("count");
+const main = document.getElementById("main");
+const startBtn = document.getElementById("startBtn");
+const countEl = document.getElementById("count");
 
-let t=5;
-const timer=setInterval(()=>{
-  if(t>0){
-    countEl.innerText=t;
-    t--;
+let clickTime, waitNum;
+let seatTryCount = 0;
+
+// ✅ 타이머 (5 → 1)
+let t = 5;
+countEl.innerText = t;
+
+const timer = setInterval(()=>{
+  t--;
+  if(t > 0){
+    countEl.innerText = t;
+  }else{
+    clearInterval(timer);
+    countEl.innerText = "시작!";
+    startBtn.disabled = false; // ✅ 여기서만 활성화
   }
 },1000);
 
-startBtn.onclick=()=>{
-  if(started || t>=0) return;
-  started=true;
-  startBtn.disabled=true;
-  clickTime=Date.now();
-  waitNum=calcWait();
+// ✅ 시작하기 클릭 → 대기창
+startBtn.onclick = ()=>{
+  if(startBtn.disabled) return;
+  clickTime = Date.now();
+  waitNum = calcWait();
   document.getElementById("startScreen").classList.add("hidden");
   main.classList.remove("hidden");
   showWaiting();
 };
 
+// 대기 순번 계산
 function calcWait(){
-  const delay=(Date.now()-clickTime)/1000;
-  if(delay<0.2) return rand(7000,9000);
-  if(delay<1) return rand(10000,20000);
-  if(delay<2) return rand(30000,40000);
+  const delay = Math.random();
+  if(delay < 0.3) return rand(7000,9000);
+  if(delay < 0.6) return rand(10000,20000);
+  if(delay < 0.85) return rand(30000,40000);
   return rand(45000,50000);
 }
 function rand(a,b){return Math.floor(Math.random()*(b-a))+a}
 
+// 대기 화면
 function showWaiting(){
   main.innerHTML=`
     <h2>대기 순번</h2>
@@ -141,41 +152,60 @@ function showWaiting(){
   `;
 }
 
-function showCalendar(month=2){
+// 날짜 선택 (달력 느낌)
+function showCalendar(){
   main.innerHTML=`
-    <h2>${month}월</h2>
+    <h2>2월</h2>
     <div class="calendar">
-      ${[27,28].map(d=>`<div class="day active" onclick="showTime('${month}-${d}')">${d}</div>`).join("")}
+      <div class="day active" onclick="showTime('2월 27일')">27</div>
+      <div class="day active" onclick="showTime('2월 28일')">28</div>
     </div>
-    <button class="sub" onclick="showCalendar(3)">▶ 3월</button><br>
+    <button class="sub" onclick="showCalendarMarch()">▶ 3월</button><br>
     <button class="sub" onclick="showWaiting()">뒤로가기</button>
   `;
 }
 
-function showTime(d){
+function showCalendarMarch(){
   main.innerHTML=`
-    <h2>${d}</h2>
+    <h2>3월</h2>
+    <div class="calendar">
+      <div class="day active" onclick="showTime('3월 1일')">1</div>
+    </div>
+    <button class="sub" onclick="showCalendar()">◀ 2월</button><br>
+    <button class="sub" onclick="showWaiting()">뒤로가기</button>
+  `;
+}
+
+// 시간 선택
+function showTime(date){
+  main.innerHTML=`
+    <h2>${date}</h2>
     <button class="primary" onclick="showCaptcha()">공연 예매</button><br>
     <button class="sub" onclick="showCalendar()">뒤로가기</button>
   `;
 }
 
+// 보안코드
 function showCaptcha(){
   const code=[...Array(6)].map(()=>String.fromCharCode(65+Math.random()*26|0)).join("");
-  window.cap=code;
+  window.cap = code;
   main.innerHTML=`
-    <h2>보안코드</h2>
+    <h2>보안코드 입력</h2>
     <div>${code}</div><br>
-    <input id="capInput" maxlength="6" oninput="this.value=this.value.toUpperCase()"><br><br>
+    <input id="capInput" maxlength="6"
+      oninput="this.value=this.value.toUpperCase()"><br><br>
     <button class="primary" onclick="checkCap()">확인</button><br>
-    <button class="sub" onclick="showTime('날짜')">뒤로가기</button>
+    <button class="sub" onclick="showCalendar()">뒤로가기</button>
   `;
 }
 
 function checkCap(){
-  if(document.getElementById("capInput").value===cap) showZone();
+  if(document.getElementById("capInput").value === cap){
+    showZone();
+  }
 }
 
+// 구역 선택
 function showZone(){
   main.innerHTML=`
     <h2>구역 선택</h2>
@@ -188,9 +218,10 @@ function showZone(){
   `;
 }
 
+// 좌석 선택
 function showSeat(type){
-  tryCount++;
-  let total,open,rate;
+  seatTryCount = 0; // 좌석 들어올 때 초기화
+  let total, open, rate;
   if(type==="F"){total=30;open=3;rate=0.0005}
   if(type==="1"){total=45;open=13;rate=0.03}
   if(type==="2"){total=60;open=35;rate=0.05}
@@ -206,29 +237,34 @@ function showSeat(type){
       html+=`<div class="seat block"></div>`;
     }
   }
-  html+='</div><button class="sub" onclick="showZone()">뒤로가기</button>';
+  html+=`</div><button class="sub" onclick="showZone()">뒤로가기</button>`;
   main.innerHTML=html;
 }
 
+// 좌석 클릭 시도
 function trySeat(el,rate,type){
-  if(Math.random()<rate){
+  seatTryCount++; // ✅ 좌석 클릭 횟수
+  if(Math.random() < rate){
     success(type);
   }else{
     el.className="seat block";
   }
 }
 
+// 성공
 function success(type){
   const time=((Date.now()-clickTime)/1000).toFixed(2);
-  saveRank(time,waitNum,type,tryCount);
+  saveRank(time,waitNum,type,seatTryCount);
   main.innerHTML=`
     <h2>🎉 예매 성공</h2>
-    <div>${time}초 / ${waitNum}번 / ${type}구역</div><br>
+    <div>${time}초 / ${waitNum}번</div>
+    <div>${type}구역 / 좌석 시도 ${seatTryCount}회</div><br>
     <button class="primary" onclick="showRanking()">랭킹 보기</button><br>
     <button class="sub" onclick="location.reload()">처음으로</button>
   `;
 }
 
+// 랭킹
 function saveRank(t,w,z,c){
   const r=JSON.parse(localStorage.getItem("rank")||"[]");
   r.push({t,w,z,c});
@@ -239,7 +275,7 @@ function showRanking(){
   const r=JSON.parse(localStorage.getItem("rank")||"[]");
   let h='<h2>🏆 랭킹</h2>';
   r.sort((a,b)=>a.t-b.t).forEach(v=>{
-    h+=`<div>${v.t}s / ${v.w}번 / ${v.z} / 시도 ${v.c}</div>`;
+    h+=`<div>${v.t}s / ${v.w}번 / ${v.z} / 좌석 ${v.c}회</div>`;
   });
   h+='<br><button class="sub" onclick="location.reload()">처음으로</button>';
   document.getElementById("startScreen").classList.add("hidden");
