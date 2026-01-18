@@ -6,75 +6,24 @@
 <title>INTERPARK PRACTICE</title>
 
 <style>
-body{
-  margin:0;
-  font-family:-apple-system,system-ui;
-  background:#f4f7fb;
-}
-#app{
-  max-width:420px;
-  margin:0 auto;
-  padding:16px;
-}
-h1{
-  text-align:center;
-  color:#0066cc;
-  font-weight:800;
-}
-button{
-  width:100%;
-  padding:14px;
-  font-size:16px;
-  background:#0066cc;
-  color:white;
-  border:none;
-  border-radius:8px;
-  margin-top:12px;
-}
-.card{
-  background:white;
-  border-radius:12px;
-  padding:16px;
-  margin-top:12px;
-}
-.center{text-align:center;}
-.small{font-size:13px;color:#777;}
+body{margin:0;font-family:-apple-system;background:#f4f6fa}
+#app{max-width:420px;margin:auto;padding:16px}
+h1{text-align:center;color:#0066cc}
+button{width:100%;padding:12px;border:none;border-radius:8px;background:#0066cc;color:#fff;font-size:15px;margin-top:8px}
+.card{background:#fff;border-radius:12px;padding:16px;margin-top:12px}
+.center{text-align:center}
 
-.zone-grid{
-  display:grid;
-  grid-template-columns:repeat(12,1fr);
-  gap:6px;
-}
-.zone{
-  padding:14px 0;
-  border-radius:8px;
-  text-align:center;
-  font-weight:700;
-  font-size:13px;
-}
-.floor{background:#ff6b6b;}
-.one{background:#ffd43b;}
-.two{background:#69db7c;}
+.zone-grid{display:grid;grid-template-columns:repeat(12,1fr);gap:5px}
+.zone{padding:10px 0;border-radius:6px;text-align:center;font-weight:700;font-size:12px}
+.floor{background:#ff6b6b}
+.one{background:#ffd43b}
+.two{background:#69db7c}
 
-.seat-wrap{
-  height:50vh;
-  overflow-x:auto;
-  background:white;
-  border-radius:12px;
-  padding:10px;
-}
-.seats{
-  display:grid;
-  grid-template-columns:repeat(18,1fr);
-  gap:4px;
-  min-width:700px;
-}
-.seat{
-  height:14px;
-  border-radius:2px;
-}
-.free{background:#2db400;}
-.taken{background:#888;}
+.seat-wrap{height:45vh;overflow:auto;background:#fff;border-radius:12px;padding:8px}
+.seats{display:grid;grid-template-columns:repeat(24,1fr);gap:2px}
+.seat{height:7px;border-radius:1px}
+.free{background:#2db400}
+.dead{background:#888}
 </style>
 </head>
 
@@ -85,17 +34,23 @@ button{
 </div>
 
 <script>
-const screen = document.getElementById("screen");
-let queue = Math.floor(Math.random()*50000)+1;
-let canClick=false;
-let lastClick=0;
+const screen=document.getElementById("screen");
+let startTime=0;
+let clicked=false;
+let myRank=0;
+
+/* 랭킹 */
+function saveRank(rank){
+  let r=JSON.parse(localStorage.getItem("rank")||"[]");
+  r.push(rank);
+  r=r.sort((a,b)=>a-b).slice(0,10);
+  localStorage.setItem("rank",JSON.stringify(r));
+}
 
 /* 시작 */
 function start(){
   screen.innerHTML=`
-    <div class="card center">
-      <p>티켓팅 연습</p>
-    </div>
+    <div class="card center">티켓팅 연습</div>
     <button onclick="count()">시작하기</button>
   `;
 }
@@ -103,86 +58,113 @@ function start(){
 /* 카운트 */
 function count(){
   let c=5;
-  canClick=false;
+  clicked=false;
   screen.innerHTML=`
-    <div class="card center">
-      <h2 id="cnt">5</h2>
-    </div>
-    <button onclick="wait()">시작하기</button>
+    <div class="card center"><h2 id="c">5</h2></div>
+    <button onclick="enter()">시작하기</button>
   `;
   const t=setInterval(()=>{
     c--;
-    document.getElementById("cnt").innerText=c;
+    document.getElementById("c").innerText=c;
     if(c===0){
-      canClick=true;
+      startTime=performance.now();
       clearInterval(t);
     }
   },1000);
 }
 
-/* 대기 */
-function wait(){
-  if(!canClick) return;
-  lastClick=Date.now();
-  setTimeout(()=>{
-    screen.innerHTML=`
-      <div class="card center">
-        <p>대기 순번</p>
-        <h2>${queue}번</h2>
-      </div>
-    `;
-    setTimeout(zoneSelect,3000);
-  },0);
+/* 대기 순번 계산 */
+function enter(){
+  if(clicked || startTime===0) return;
+  const diff=performance.now()-startTime;
+  if(diff<0) return;
+  clicked=true;
+
+  myRank=Math.min(
+    50000,
+    Math.floor(7000 + diff*15)
+  );
+  saveRank(myRank);
+
+  screen.innerHTML=`
+    <div class="card center">
+      <p>나의 대기순번</p>
+      <h2>${myRank}번</h2>
+    </div>
+  `;
+  setTimeout(calendar,5000);
 }
 
-/* 구역 선택 (고정 배치) */
-function zoneSelect(){
-  const layout=[
+/* 달력 */
+let month=2;
+function calendar(){
+  screen.innerHTML=`
+    <div class="card center">
+      <h3>2026년 ${month}월</h3>
+      <button onclick="selectDate('${month===2?'2/27 7PM':'3/1 5PM'}')">
+        ${month===2?'2월 27일 (금) 7PM':'3월 1일 (일) 5PM'}
+      </button>
+      <button onclick="month=month===2?3:2;calendar()">▶</button>
+    </div>
+  `;
+}
+
+/* 보안코드 */
+function selectDate(t){
+  const code=Math.random().toString(36).substring(2,6).toUpperCase();
+  screen.innerHTML=`
+    <div class="card center">
+      <p>${t}</p>
+      <p><b>${code}</b></p>
+      <input id="cap" placeholder="보안코드" oninput="this.value=this.value.toUpperCase()">
+      <button onclick="check('${code}')">확인</button>
+    </div>
+  `;
+}
+function check(c){
+  if(document.getElementById("cap").value===c) zone();
+  else alert("보안코드 오류");
+}
+
+/* 구역 */
+function zone(){
+  const map=[
     2,2,2,1,1,'F','F',1,1,2,2,2,
     2,2,2,2,1,1,1,1,2,2,2,2
   ];
   screen.innerHTML=`
     <div class="zone-grid">
-      ${layout.map(z=>{
+      ${map.map(z=>{
         const cls=z==='F'?'floor':z===1?'one':'two';
-        const txt=z==='F'?'FLOOR':z+'층';
-        return `<div class="zone ${cls}" onclick="seat('${cls}')">${txt}</div>`;
+        return `<div class="zone ${cls}" onclick="seat('${cls}')">${z==='F'?'FLOOR':z+'층'}</div>`;
       }).join("")}
     </div>
   `;
 }
 
-/* 좌석 (난이도 극악 + 일정 배치) */
-function seat(zone){
-  const rate={floor:0.995,one:0.92,two:0.75}[zone];
-  const total=180;
-  const blocked=Math.floor(total*rate);
-
+/* 좌석 */
+function seat(z){
+  const rate={floor:0.998,one:0.97,two:0.9}[z];
   screen.innerHTML=`
-    <button onclick="zoneSelect()">← 구역 다시 선택</button>
-    <div class="seat-wrap">
-      <div class="seats">
-        ${Array.from({length:total},(_,i)=>{
-          if(i<blocked){
-            return `<div class="seat taken"
-              onclick="this.style.background='#555';alert('이미 선택된 좌석입니다')"></div>`;
-          }else{
-            return `<div class="seat free" onclick="finish()"></div>`;
-          }
-        }).join("")}
-      </div>
-    </div>
+    <button onclick="zone()">← 구역</button>
+    <div class="seat-wrap"><div class="seats">
+      ${Array.from({length:480},()=>Math.random()<rate
+        ?`<div class="seat dead"></div>`
+        :`<div class="seat free" onclick="trySeat(this,'${z}')"></div>`
+      ).join("")}
+    </div></div>
   `;
 }
 
-/* 성공 */
-function finish(){
-  screen.innerHTML=`
-    <div class="card center">
-      <h2>🎉 예매 성공</h2>
-      <button onclick="location.reload()">다시 연습</button>
-    </div>
-  `;
+function trySeat(el,z){
+  const fail={floor:0.7,one:0.5,two:0.3}[z];
+  if(Math.random()<fail){
+    el.className="seat dead";
+    alert("다른 사용자가 먼저 선택했습니다");
+  }else{
+    alert("🎉 예매 성공");
+    location.reload();
+  }
 }
 
 start();
